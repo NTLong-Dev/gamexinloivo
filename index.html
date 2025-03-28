@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Xin Lỗi Vợ iuuu</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      background-color: #000;
+    }
+
+    #gameCanvas {
+      display: block;
+    }
+
+    .message {
+      position: absolute;
+      top: 20px;
+      left: 50%;
+      width: 1000px;
+      transform: translateX(-50%);
+      font-size: 20px;
+      color: #1392b6;
+      display: none;
+    }
+
+    .score {
+      position: absolute;
+      top: 50px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 1.5rem;
+      color: #28a745;
+    }
+
+    .btn-start,
+    .btn-shoot {
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 15px 30px;
+      font-size: 1.2rem;
+      color: white;
+      border: none;
+      border-radius: 10px;
+    }
+
+    .btn-start {
+      bottom: 60px;
+      background-color: #007bff;
+    }
+
+    .btn-shoot {
+      bottom: 10px;
+      background-color: #dc3545;
+      display: none;
+    }
+
+    @media (max-width: 600px) {
+      .message {
+        font-size: 15px;
+        width: 350px;
+        position: absolute;
+        top: 0;
+      }
+
+      .score {
+        font-size: 1rem;
+      }
+
+      .btn-start,
+      .btn-shoot {
+        font-size: 0.9rem;
+        padding: 10px 20px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div id="gameContainer">
+    <canvas id="gameCanvas"></canvas>
+    <div class="message" id="message">Vợ uiii, cho chồng xin lỗi vợ với ạ,chồng biết lỗi rùi huhu, và nhớ vợ nữa ạ, vợ
+      đừng dỗi chồng nữa nha😢😢😢
+    </div>
+    <div class="score">Điểm: <span id="score">0</span></div>
+    <button class="btn-start" onclick="startGame()">Bắt Đầu</button>
+    <button class="btn-shoot" onclick="shootBullet()">Bắn</button>
+    <audio id="shootSound" src="shoot.mp3"></audio>
+    <audio id="hitSound" src="hit.mp3"></audio>
+
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+  <script>
+    let scene, camera, renderer;
+    let heart, bullets = [], score = 0;
+    let heartSpeed = 0.01;
+    let gameStarted = false;
+
+    function initGame() {
+      scene = new THREE.Scene();
+      camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+      renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('gameCanvas'), antialias: true });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      document.body.appendChild(renderer.domElement);
+
+      let loader = new THREE.TextureLoader();
+      let material = new THREE.MeshBasicMaterial({
+        map: loader.load('/cute.png'),
+        transparent: true
+      });
+      let geometry = new THREE.PlaneGeometry(1, 1.5);
+      heart = new THREE.Mesh(geometry, material);
+      heart.position.set(0, 3, -5);
+      scene.add(heart);
+
+      camera.position.z = 5;
+    }
+
+    function createBullet(x) {
+      let geometry = new THREE.SphereGeometry(0.1, 8, 8);
+      let material = new THREE.MeshBasicMaterial({ color: 0xffff00 });
+      let bullet = new THREE.Mesh(geometry, material);
+      bullet.position.set(x, -2, -5);
+      scene.add(bullet);
+      bullets.push(bullet);
+    }
+
+    function updateGame() {
+      if (!gameStarted) return;
+
+      heart.position.y -= heartSpeed;
+      if (heart.position.y < -3) {
+        heart.position.y = 3;
+        heart.position.x = (Math.random() - 0.5) * 6;
+      }
+
+      bullets.forEach((bullet, index) => {
+        bullet.position.y += 0.1;
+        if (bullet.position.y > 3) {
+          scene.remove(bullet);
+          bullets.splice(index, 1);
+        }
+      });
+
+      bullets.forEach((bullet, index) => {
+        if (bullet.position.distanceTo(heart.position) < 0.5) {
+          score++;
+          document.getElementById('score').innerText = score;
+          document.getElementById('message').style.display = 'block';
+
+          // Phát âm thanh khi trúng
+          let hitSound = document.getElementById('hitSound');
+          if (hitSound) {
+            hitSound.currentTime = 0;
+            hitSound.play();
+          }
+
+          setTimeout(() => { document.getElementById('message').style.display = 'none'; }, 1000);
+
+          scene.remove(bullet);
+          bullets.splice(index, 1);
+          heart.position.y = 3;
+          heart.position.x = (Math.random() - 0.5) * 6;
+        }
+      });
+
+      renderer.render(scene, camera);
+      requestAnimationFrame(updateGame);
+    }
+
+    document.addEventListener('mousemove', (event) => {
+      if (!gameStarted) return;
+      let mouseX = (event.clientX / window.innerWidth) * 2 - 1;
+      heart.position.x = mouseX * 3;
+    });
+
+    function startGame() {
+      gameStarted = true;
+      document.querySelector('.btn-start').style.display = 'none';
+      document.querySelector('.btn-shoot').style.display = 'block';
+      initGame();
+      updateGame();
+    }
+
+    function shootBullet() {
+      if (!gameStarted) return;
+
+      // Lấy phần tử âm thanh
+      let shootSound = document.getElementById('shootSound');
+
+      // Kiểm tra nếu âm thanh đã được tải và có thể phát
+      if (shootSound) {
+        shootSound.currentTime = 0; // Reset thời gian phát để có thể bắn liên tục
+        shootSound.play();
+      }
+
+      // Tạo viên đạn
+      createBullet(heart.position.x);
+    }
+
+    document.addEventListener('click', shootBullet);
+  </script>
+</body>
+
+</html>
